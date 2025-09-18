@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Menu — OrderFood</title>
+  <style>
+    body {
+      margin:0;
+      font-family:"Segoe UI", Tahoma, sans-serif;
+      background: linear-gradient(90deg,#fde3b7 0%,#f8b6b1 45%,#f6b6df 100%);
+      color:#222;
+    }
+    header {
+      background:#ff6f61;
+      padding:12px 0;
+      position:sticky;
+      top:0;
+      z-index:50;
+      box-shadow:0 6px 16px rgba(0,0,0,0.06);
+    }
+    header .container {
+      width:min(1200px,94%);
+      margin:0 auto;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .logo {font-weight:800;color:#fff;font-size:1.2rem;}
+    nav ul {list-style:none;display:flex;gap:20px;}
+    nav a {color:#111;text-decoration:none;font-weight:600;padding:6px 10px;border-radius:6px;}
+    nav a.active {background:#111;color:#fff;}
+    .badge {background:#fff;color:#ff6f61;border-radius:999px;padding:2px 8px;font-weight:700;margin-left:6px;font-size:.85rem}
+
+    main {padding:40px 0;}
+    h1 {text-align:center;margin-bottom:28px;}
+    .grid {
+      display:grid;
+      grid-template-columns: repeat(auto-fit,minmax(250px,1fr));
+      gap:24px;
+      width:min(1200px,94%);
+      margin:0 auto;
+    }
+    .card {
+      background:#fff;
+      border-radius:12px;
+      overflow:hidden;
+      box-shadow:0 6px 20px rgba(0,0,0,0.08);
+      display:flex;
+      flex-direction:column;
+    }
+    .card img {
+      width:100%;
+      height:180px;
+      object-fit:cover;
+    }
+    .card-body {
+      padding:16px;
+      display:flex;
+      flex-direction:column;
+      flex:1;
+    }
+    .card-body h3 {margin-bottom:8px;font-size:1.2rem;}
+    .card-body p {color:#555;flex:1;}
+    .price {font-weight:800;margin:8px 0;}
+    button {
+      border:none;
+      background:#ff6f61;
+      color:#fff;
+      padding:10px;
+      border-radius:8px;
+      font-weight:700;
+      cursor:pointer;
+    }
+    button:hover {background:#e65a52;}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="logo">OrderFood</div>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="menu.html">Food</a></li>
+          <li><a href="order.html">Orders <span id="ordersBadge" class="badge" style="display:none">0</span></a></li>
+          <li><a href="contact.html">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <h1>Our Menu</h1>
+    <div class="grid" id="menuGrid">
+      <!-- JS will render cards -->
+    </div>
+  </main>
+
+  <script>
+    // Food list
+    const foods = [
+      {name:"Cheesy Burger", desc:"Juicy beef patty, cheddar cheese, fresh veggies.", price:120, img:"https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg"},
+      {name:"Veggie Burger", desc:"Loaded with lettuce, tomato & plant-based patty.", price:100, img:"https://images.pexels.com/photos/1435907/pexels-photo-1435907.jpeg"},
+      {name:"Chicken Burger", desc:"Grilled chicken fillet with mayo & cheese.", price:130, img:"https://images.pexels.com/photos/1639562/pexels-photo-1639562.jpeg"},
+      {name:"French Fries", desc:"Crispy golden fries with a pinch of salt.", price:60, img:"https://images.pexels.com/photos/1583884/pexels-photo-1583884.jpeg"},
+      {name:"Cheese Fries", desc:"Fries topped with creamy melted cheese.", price:80, img:"https://images.pexels.com/photos/1893555/pexels-photo-1893555.jpeg"},
+      {name:"Pizza Margherita", desc:"Classic mozzarella & basil pizza.", price:220, img:"https://images.pexels.com/photos/2619967/pexels-photo-2619967.jpeg"},
+      {name:"Pepperoni Pizza", desc:"Loaded with cheese & pepperoni slices.", price:250, img:"https://images.pexels.com/photos/315755/pexels-photo-315755.jpeg"},
+      {name:"Pasta Alfredo", desc:"Creamy white sauce pasta with herbs.", price:180, img:"https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg"},
+      {name:"Pasta Arrabiata", desc:"Spicy red sauce pasta with chili flakes.", price:170, img:"https://images.pexels.com/photos/8500/food-dinner-pasta-spaghetti-8500.jpg"},
+      {name:"Grilled Sandwich", desc:"Toasted bread with veggies & cheese.", price:90, img:"https://images.pexels.com/photos/1600711/pexels-photo-1600711.jpeg"},
+      {name:"Club Sandwich", desc:"Triple-layer with chicken & lettuce.", price:110, img:"https://images.pexels.com/photos/461198/pexels-photo-461198.jpeg"},
+      {name:"Chocolate Cake", desc:"Rich chocolate layered cake.", price:150, img:"https://images.pexels.com/photos/291528/pexels-photo-291528.jpeg"},
+      {name:"Cheesecake", desc:"Creamy baked cheesecake with strawberry.", price:160, img:"https://images.pexels.com/photos/704569/pexels-photo-704569.jpeg"},
+      {name:"Ice Cream Sundae", desc:"Vanilla ice cream with chocolate sauce.", price:100, img:"https://images.pexels.com/photos/302680/pexels-photo-302680.jpeg"},
+      {name:"Cold Coffee", desc:"Chilled coffee with whipped cream.", price:70, img:"https://images.pexels.com/photos/302901/pexels-photo-302901.jpeg"},
+      {name:"Lemonade", desc:"Refreshing lemon drink with mint.", price:50, img:"https://images.pexels.com/photos/96974/pexels-photo-96974.jpeg"}
+    ];
+
+    // Render food cards
+    const grid = document.getElementById('menuGrid');
+    foods.forEach(f => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <img src="${f.img}" alt="${f.name}">
+        <div class="card-body">
+          <h3>${f.name}</h3>
+          <p>${f.desc}</p>
+          <div class="price">₹${f.price}</div>
+          <button onclick="addToCart('${f.name}',${f.price})">Add to Cart</button>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+
+    // Cart functions
+    function getCart(){ return JSON.parse(localStorage.getItem('cart') || '[]'); }
+    function saveCart(cart){ localStorage.setItem('cart', JSON.stringify(cart)); }
+    function updateBadge(){
+      const cart = getCart();
+      const count = cart.reduce((s,i)=>s+(i.qty||1),0);
+      const badge=document.getElementById('ordersBadge');
+      if(count>0){badge.style.display='inline-block';badge.textContent=count;}
+      else badge.style.display='none';
+    }
+    function addToCart(name,price){
+      let cart=getCart();
+      const item=cart.find(i=>i.name===name);
+      if(item) item.qty++;
+      else cart.push({name,price,qty:1});
+      saveCart(cart);
+      updateBadge();
+    }
+    updateBadge();
+
+    // Highlight nav
+    const navLinks=document.querySelectorAll('nav a');
+    const current=location.pathname.split("/").pop()||'menu.html';
+    navLinks.forEach(a=>{if(a.getAttribute('href')===current)a.classList.add('active')});
+    window.addEventListener('storage',e=>{if(e.key==='cart')updateBadge();});
+  </script>
+</body>
+</html>

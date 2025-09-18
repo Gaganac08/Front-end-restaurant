@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Your Orders — OrderFood</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:"Segoe UI", Tahoma, sans-serif;background:linear-gradient(90deg,#fde3b7 0%,#f8b6b1 45%,#f6b6df 100%);color:#222;min-height:100vh}
+    .container{width:min(1100px,92%);margin:0 auto;padding:22px 0}
+    header{background:#ff6f61;padding:12px 0}
+    header .container{display:flex;align-items:center;justify-content:space-between}
+    .logo{font-weight:800;color:#fff}
+    nav ul{display:flex;gap:18px;list-style:none}
+    nav a{color:#111;text-decoration:none;font-weight:600;padding:6px 10px;border-radius:6px}
+    nav a.active{background:#111;color:#fff}
+    .badge{background:#fff;color:#ff6f61;border-radius:999px;padding:2px 8px;font-weight:700;margin-left:6px;font-size:.85rem}
+
+    .cart-section{margin-top:28px;background:rgba(255,255,255,0.95);padding:18px;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,0.06)}
+    .cart-list{display:flex;flex-direction:column;gap:12px}
+    .cart-item{display:flex;align-items:center;gap:14px;padding:12px;border-radius:10px;border:1px solid rgba(0,0,0,0.04)}
+    .item-info{flex:1}
+    .item-name{font-weight:700}
+    .item-meta{color:#666;font-size:.95rem}
+    .qty{width:56px;padding:6px;border-radius:6px;border:1px solid #ddd;text-align:center}
+    .remove-btn{background:transparent;border:none;color:#ff6f61;cursor:pointer;font-weight:700}
+    .summary{display:flex;justify-content:space-between;align-items:center;margin-top:18px;padding-top:8px;border-top:1px dashed rgba(0,0,0,0.06)}
+    .total{font-weight:800;font-size:1.25rem}
+    .order-actions{display:flex;gap:12px}
+    .btn{padding:10px 16px;border-radius:8px;border:none;cursor:pointer;font-weight:700}
+    .order-btn{background:#28a745;color:#fff}
+    .clear-btn{background:#ff6f61;color:#fff}
+    .empty{padding:30px;text-align:center;color:#666}
+
+    /* modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:200}
+    .modal{background:#fff;padding:18px;border-radius:10px;width:90%;max-width:420px;box-shadow:0 20px 50px rgba(0,0,0,0.18)}
+    .modal h3{margin-bottom:12px}
+    .modal p{color:#444;margin-bottom:18px}
+    .modal .row{display:flex;justify-content:flex-end;gap:10px}
+
+    .success{display:none;padding:18px;margin-top:14px;background:#e7f9ee;border-radius:8px;color:#2a7f4a;font-weight:700;text-align:center}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="logo">OrderFood</div>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="menu.html">Food</a></li>
+          <li><a href="order.html" id="ordersLink">Orders <span id="ordersBadge" class="badge" style="display:none">0</span></a></li>
+ <li><a href="contact.html">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="cart-section">
+      <h2>Your Cart</h2>
+      <div id="cartArea">
+        <!-- rendered by JS -->
+      </div>
+    </section>
+
+    <div id="successBox" class="success">✅ Your order has been completed. Thank you!</div>
+  </main>
+
+  <!-- confirmation modal -->
+  <div id="modalBackdrop" class="modal-backdrop">
+    <div class="modal">
+      <h3>Confirm your order</h3>
+      <p id="modalText">Do you want to place this order?</p>
+      <div class="row">
+        <button id="modalCancel" class="btn" style="background:#ddd">Cancel</button>
+        <button id="modalConfirm" class="btn order-btn">Order Now</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // utilities for cart in localStorage
+    const CART_KEY = 'cart';
+    function readCart(){ return JSON.parse(localStorage.getItem(CART_KEY)||'[]'); }
+    function writeCart(data){ localStorage.setItem(CART_KEY, JSON.stringify(data)); window.dispatchEvent(new Event('storage')); }
+
+    // nav highlight
+    (function highlightNav(){
+      const links = document.querySelectorAll('nav a');
+      const current = location.pathname.split("/").pop() || 'order.html';
+      links.forEach(a=>{
+        if(a.getAttribute('href') === current) a.classList.add('active');
+      });
+    })();
+
+    // badge
+    function updateBadge(){
+      const badge = document.getElementById('ordersBadge');
+      const cart = readCart();
+      const count = cart.reduce((s,i)=>s + (i.qty||1),0);
+      if(count>0){ badge.style.display='inline-block'; badge.textContent = count; }
+      else badge.style.display='none';
+    }
+    updateBadge();
+    window.addEventListener('storage', e=>{ if(e.key===CART_KEY) updateBadge(); renderCart(); });
+
+    // render cart
+    const cartArea = document.getElementById('cartArea');
+    function renderCart(){
+      const cart = readCart();
+      if(!cart.length){
+        cartArea.innerHTML = `<div class="empty">Your cart is empty. Go to <a href="menu.html">Food</a> to add items.</div>`;
+        return;
+      }
+      // build list
+      const list = document.createElement('div');
+      list.className = 'cart-list';
+      cart.forEach((it, idx) => {
+        const item = document.createElement('div');
+        item.className = 'cart-item';
+        item.innerHTML = `
+          <div style="width:80px;height:64px;border-radius:8px;overflow:hidden">
+            <img src="${it.img||'https://via.placeholder.com/150'}" style="width:100%;height:100%;object-fit:cover" alt="${it.name}">
+          </div>
+          <div class="item-info">
+            <div class="item-name">${it.name}</div>
+            <div class="item-meta">$${(it.price).toFixed(2)} each</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="number" min="1" class="qty" data-index="${idx}" value="${it.qty||1}">
+            <div style="width:100px;text-align:right;font-weight:700">$<span class="line-total">${((it.price)*(it.qty||1)).toFixed(2)}</span></div>
+            <button class="remove-btn" data-index="${idx}">Remove</button>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+
+      // summary + controls
+      const summary = document.createElement('div');
+      summary.className = 'summary';
+      const total = cart.reduce((s,i)=>s + (i.price * (i.qty||1)),0);
+      summary.innerHTML = `
+        <div class="total">Total: $${total.toFixed(2)}</div>
+        <div class="order-actions">
+          <button id="clearCart" class="btn clear-btn">Clear Cart</button>
+          <button id="placeOrder" class="btn order-btn">Order</button>
+        </div>
+      `;
+
+      cartArea.innerHTML = ''; // clear
+      cartArea.appendChild(list);
+      cartArea.appendChild(summary);
+
+      // attach listeners
+      document.querySelectorAll('.qty').forEach(inp=>{
+        inp.addEventListener('change', e=>{
+          const idx = parseInt(e.target.dataset.index,10);
+          let val = parseInt(e.target.value,10) || 1;
+          if(val < 1) val = 1;
+          const c = readCart();
+          c[idx].qty = val;
+          writeCart(c);
+          renderCart(); // rerender to update totals
+        });
+      });
+
+      document.querySelectorAll('.remove-btn').forEach(b=>{
+        b.addEventListener('click', e=>{
+          const idx = parseInt(e.target.dataset.index,10);
+          const c = readCart();
+          c.splice(idx,1);
+          writeCart(c);
+          renderCart();
+          updateBadge();
+        });
+      });
+
+      document.getElementById('clearCart').addEventListener('click', ()=>{
+        if(confirm('Clear all items from cart?')){ writeCart([]); renderCart(); updateBadge(); }
+      });
+
+      document.getElementById('placeOrder').addEventListener('click', ()=>{
+        // show confirm modal
+        const cart = readCart();
+        const tot = cart.reduce((s,i)=>s + (i.price * (i.qty||1)),0);
+        document.getElementById('modalText').textContent = `You are about to order ${cart.length} item(s). Total: $${tot.toFixed(2)}. Proceed?`;
+        document.getElementById('modalBackdrop').style.display = 'flex';
+      });
+    }
+
+    // modal handlers
+    document.getElementById('modalCancel').addEventListener('click', ()=>{
+      document.getElementById('modalBackdrop').style.display = 'none';
+    });
+    document.getElementById('modalConfirm').addEventListener('click', ()=>{
+      // simulate order completion
+      writeCart([]); // clear cart
+      document.getElementById('modalBackdrop').style.display = 'none';
+      document.getElementById('successBox').style.display = 'block';
+      renderCart(); updateBadge();
+      // hide success after a few seconds
+      setTimeout(()=>{ document.getElementById('successBox').style.display='none'; }, 4000);
+    });
+
+    // initialize: we support items that may not have images when added from menu; to ensure image present,
+    // if cart items are missing img, try matching menuItems (only if menu exists in window, otherwise skip)
+    function normalizeCartImages(){
+      const c = readCart();
+      // sample fallback map (should match menu page list)
+      const fallback = {
+        'cheesy-burger':'https://images.pexels.com/photos/70497/pexels-photo-70497.jpeg',
+        'spicy-pizza':'https://images.pexels.com/photos/315755/pexels-photo-315755.jpeg',
+        'french-fries':'https://images.pexels.com/photos/1583884/pexels-photo-1583884.jpeg',
+        'grilled-chicken':'https://images.pexels.com/photos/461198/pexels-photo-461198.jpeg'
+      };
+      let changed=false;
+      c.forEach(it=>{
+        if(!it.img && fallback[it.id]){ it.img = fallback[it.id]; changed = true; }
+      });
+      if(changed) writeCart(c);
+    }
+
+    normalizeCartImages();
+    renderCart();
+    updateBadge();
+  </script>
+</body>
+</html>

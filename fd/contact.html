@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Contact — OrderFood</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:"Segoe UI", Tahoma, sans-serif;background:linear-gradient(90deg,#fde3b7 0%,#f8b6b1 45%,#f6b6df 100%);color:#222;min-height:100vh}
+    .container{width:min(1000px,94%);margin:0 auto;padding:24px 0}
+    header{background:#ff6f61;padding:12px 0}
+    header .container{display:flex;align-items:center;justify-content:space-between}
+    .logo{font-weight:800;color:#fff}
+    nav ul{display:flex;gap:18px;list-style:none}
+    nav a{color:#111;text-decoration:none;font-weight:600;padding:6px 10px;border-radius:6px}
+    nav a.active{background:#111;color:#fff}
+    .badge{background:#fff;color:#ff6f61;border-radius:999px;padding:2px 8px;font-weight:700;margin-left:6px;font-size:.85rem}
+
+    .contact-wrap{margin-top:34px;background:rgba(255,255,255,0.95);padding:22px;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,0.06)}
+    h1{margin-bottom:10px}
+    p.lead{color:#666;margin-bottom:18px}
+    form .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    label{display:block;margin-bottom:6px;font-weight:700}
+    input,textarea,select{width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;font-size:1rem}
+    textarea{min-height:140px;resize:vertical}
+    .full{grid-column:1/-1}
+    .btn{background:#ff6f61;color:#fff;border:none;padding:10px 14px;border-radius:8px;font-weight:800;cursor:pointer}
+    .note{margin-top:12px;color:#2a7f4a;font-weight:700;display:none}
+    .messages-list{margin-top:18px}
+    .msg{padding:12px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);margin-bottom:10px;background:#fff}
+    .small{font-size:.9rem;color:#666}
+    @media(max-width:720px){form .row{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="logo">OrderFood</div>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="menu.html">Food</a></li>
+          <li><a href="order.html">Orders <span id="ordersBadge" class="badge" style="display:none">0</span></a></li>
+          <li><a href="contact.html">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="contact-wrap">
+      <h1>Share Your Complaints</h1>
+      <p class="lead">Have a question or feedback? Send it to our team and we'll get back to you shortly.</p>
+
+      <form id="contactForm">
+        <div class="row">
+          <div>
+            <label for="name">Full name</label>
+            <input id="name" name="name" type="text" required />
+          </div>
+          <div>
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" required />
+          </div>
+
+          <div class="full">
+            <label for="subject">Subject</label>
+            <input id="subject" name="subject" type="text" required />
+          </div>
+
+          <div class="full">
+            <label for="message">Message</label>
+            <textarea id="message" name="message" required></textarea>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;display:flex;gap:12px;align-items:center">
+          <button class="btn" type="submit">Send Message</button>
+          <div class="note" id="successNote">✅ Your message was sent — we'll review it shortly.</div>
+        </div>
+      </form>
+
+      <div class="messages-list" id="messagesList" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <script>
+    // highlight nav
+    (function highlightNav(){
+      const links = document.querySelectorAll('nav a');
+      const current = location.pathname.split("/").pop() || 'index.html';
+      links.forEach(a=>{
+        if(a.getAttribute('href') === current) a.classList.add('active');
+      });
+    })();
+
+    // orders badge logic (same as other pages)
+    function updateBadge(){
+      const badge = document.getElementById('ordersBadge');
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      const count = cart.reduce((s, i) => s + (i.qty || 1), 0);
+      if(badge){
+        if (count > 0) { badge.style.display = 'inline-block'; badge.textContent = count; }
+        else badge.style.display = 'none';
+      }
+    }
+    updateBadge();
+    window.addEventListener('storage', e => { if(e.key === 'cart') updateBadge(); });
+
+    // contact form handling
+    const FORM_KEY = 'messages';
+    function readMessages(){ return JSON.parse(localStorage.getItem(FORM_KEY) || '[]'); }
+    function writeMessages(msgs){ localStorage.setItem(FORM_KEY, JSON.stringify(msgs)); }
+
+    const form = document.getElementById('contactForm');
+    const successNote = document.getElementById('successNote');
+    const messagesList = document.getElementById('messagesList');
+
+    function renderMessages(){
+      const msgs = readMessages().slice().reverse(); // newest first
+      if(!msgs.length){ messagesList.innerHTML = ''; return; }
+      messagesList.innerHTML = msgs.map(m => `
+        <div class="msg">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <strong>${escapeHtml(m.name)}</strong>
+            <span class="small">${new Date(m.ts).toLocaleString()}</span>
+          </div>
+          <div class="small" style="margin:6px 0">${escapeHtml(m.email)} · ${escapeHtml(m.subject)}</div>
+          <div>${escapeHtml(m.message)}</div>
+        </div>
+      `).join('');
+    }
+
+    function escapeHtml(s){
+      return String(s)
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      const data = {
+        name: form.name.value.trim(),
+        email: form.email.value.trim(),
+        subject: form.subject.value.trim(),
+        message: form.message.value.trim(),
+        ts: Date.now()
+      };
+      // basic validation
+      if(!data.name || !data.email || !data.subject || !data.message){
+        alert('Please fill all fields.');
+        return;
+      }
+      const msgs = readMessages();
+      msgs.push(data);
+      writeMessages(msgs);
+      successNote.style.display = 'block';
+      setTimeout(()=> successNote.style.display = 'none', 3500);
+      form.reset();
+      renderMessages();
+    });
+
+    // initial render of messages (for demo purposes; in production you'd fetch server-side)
+    renderMessages();
+  </script>
+</body>
+</html>
